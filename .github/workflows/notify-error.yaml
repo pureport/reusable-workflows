@@ -1,0 +1,47 @@
+name: Notify error
+on:
+  workflow_call:
+    inputs:
+      username:
+        type: string
+        default: GitHub Actions
+      text:
+        type: string
+        default: <!here> Github Workflow run failed
+      color:
+        type: string
+        default: danger
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: true
+jobs:
+  notify-error:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set job variables
+        id: vars
+        run: |
+          echo "sha_short=$(echo ${{ github.sha }} | cut -c1-8)" >> $GITHUB_OUTPUT
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "${{ inputs.text }}",
+              "username": "${{ inputs.username }}",
+              "attachments": [
+                {
+                  "color": "${{ inputs.color }}",
+                  "author_name": "${{ github.workflow }} - ${{ github.job }}",
+                  "fields": [
+                    {"title": "repo", "value": "<${{ github.server_url }}/${{ github.repository }}|${{ github.repository }}>", "short": true },
+                    {"title": "commit", "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ steps.vars.outputs.sha_short }}>", "short": true },
+                    {"title": "workflow", "value": "<${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}/checks|${{ github.workflow }}>", "short": true }
+                  ]
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
